@@ -1,0 +1,42 @@
+{
+  "access_token": "YOUR_ACCESS_TOKEN_HERE",
+  "buy_orders": [
+    {
+      "comment": "Buying Tour of Duty Ticket",
+      "metal": 1.33,
+      "defindex": 725,
+      "quality": "unique"
+    },
+    {
+      "comment": "Buying Strange Scattergun",
+      "keys": 2,
+      "metal": 5.33,
+      "defindex": 13,
+      "quality": "strange"
+    },
+    {
+      "comment": "Buying Pro KS Shotgun Kit - Hot Rod + Cerebral Discharge",
+      "keys": 3,
+      "defindex": 6527,
+      "quality": "unique",
+      "attributes": [
+        {
+          "defindex": 2025,
+          "float_value": 3
+        },
+        {
+          "defindex": 2013,
+          "float_value": 2003
+        },
+        {
+          "defindex": 2014,
+          "float_value": 7
+        },
+        {
+          "defindex": 2012,
+          "float_value": 9
+        }
+      ]
+    }
+  ]
+}
