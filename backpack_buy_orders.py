@@ -7,6 +7,7 @@ Simplified tool for creating buy orders on backpack.tf using the v2 API
 import json
 import requests
 import sys
+import os
 from typing import Dict, List, Any, Optional
 
 class BackpackBuyOrderTool:
@@ -102,7 +103,8 @@ def load_config(filename: str = "buy_orders.json") -> Dict[str, Any]:
     """Load configuration from JSON file"""
     try:
         with open(filename, 'r') as f:
-            return json.load(f)
+            config = json.load(f)
+            return config
     except FileNotFoundError:
         print(f"Config file '{filename}' not found!")
         return {}
@@ -153,16 +155,20 @@ def main():
     """Main function"""
     print("=== Backpack.tf Buy Order Creator ===\n")
     
+    config_filename = "buy_orders.json"
+    
     # Check if config file exists
-    try:
-        config = load_config()
-        if not config:
-            print("Creating example configuration...")
-            create_example_config()
-            return
-    except:
-        print("Creating example configuration...")
+    if not os.path.exists(config_filename):
+        print("Configuration file doesn't exist.")
         create_example_config()
+        return
+    
+    # Load the config
+    config = load_config()
+    
+    # If config is empty or invalid, don't overwrite the existing file
+    if not config:
+        print("Error loading configuration. Please check the file format.")
         return
     
     # Get access token
