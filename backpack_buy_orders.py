@@ -21,26 +21,42 @@ class BackpackBuyOrderTool:
         }
     
     def create_buy_orders(self, orders: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Create buy orders using the batch API endpoint"""
+        """Create buy orders using the v2 batch API endpoint"""
         url = f"{self.base_url}/v2/classifieds/listings/batch"
         
-        # Convert simplified format to API format
-        listings = []
-        for order in orders:
-            listing = self._convert_order_to_listing(order)
-            listings.append(listing)
+        # Format orders according to v2 API
+        formatted_listings = {}
+        for i, order in enumerate(orders):
+            listing_id = f"listing_{i}"
+            formatted_listings[listing_id] = self._convert_order_to_listing(order)
         
-        params = {"token": self.access_token}
-        payload = {"listings": listings}
+        payload = {
+            "listings": formatted_listings
+        }
+        
+        params = {
+            "token": self.access_token
+        }
         
         try:
             response = requests.post(url, headers=self.headers, params=params, json=payload)
             print(f"Status Code: {response.status_code}")
+            print(f"Request URL: {url}")
+            print(f"Request Payload: {json.dumps(payload, indent=2)}")
             
             if response.status_code == 200:
                 result = response.json()
-                if "listings" in result and "error" in result["listings"]:
-                    return {"success": False, "error": result["listings"]["error"]["message"]}
+                
+                # Check for errors in listings
+                if "listings" in result:
+                    errors = []
+                    for listing_id, listing_data in result["listings"].items():
+                        if isinstance(listing_data, dict) and "error" in listing_data:
+                            errors.append(f"{listing_id}: {listing_data['error']}")
+                    
+                    if errors:
+                        return {"success": False, "error": "; ".join(errors)}
+                
                 return {"success": True, "result": result}
             else:
                 return {"success": False, "error": f"HTTP {response.status_code}: {response.text}"}
@@ -49,14 +65,15 @@ class BackpackBuyOrderTool:
             return {"success": False, "error": str(e)}
     
     def _convert_order_to_listing(self, order: Dict[str, Any]) -> Dict[str, Any]:
-        """Convert simplified order format to API listing format"""
+        """Convert simplified order format to API listing format according to v2 API"""
         
-        # Basic listing structure
+        # Basic listing structure for the v2 API
         listing = {
             "intent": 0,  # 0 = buy order
             "details": order.get("comment", ""),
-            "buyout": 1,
-            "offers": 1,
+            "buyout": 1,  # 1 = allow buyout
+            "offers": 1,   # 1 = allow offers
+            "promoted": 0,  # 0 = not promoted
             "currencies": {},
             "item": {
                 "quality": 6,  # Unique quality by default
@@ -85,17 +102,18 @@ class BackpackBuyOrderTool:
             else:
                 listing["item"]["quality"] = order["quality"]
         
+        # Handle item level
+        if "level" in order:
+            listing["item"]["level"] = order["level"]
+            
+        # Handle craftable status
+        if "craftable" in order:
+            if not order["craftable"]:
+                listing["item"]["flag_cannot_craft"] = True
+        
         # Handle attributes for special items
         if "attributes" in order:
             listing["item"]["attributes"] = order["attributes"]
-        
-        # Handle other item properties
-        for prop in ["level", "craftable"]:
-            if prop in order:
-                if prop == "craftable":
-                    listing["item"]["flag_cannot_craft"] = not order[prop]
-                else:
-                    listing["item"][prop] = order[prop]
         
         return listing
 
@@ -153,7 +171,7 @@ def create_example_config():
 
 def main():
     """Main function"""
-    print("=== Backpack.tf Buy Order Creator ===\n")
+    print("=== Backpack.tf Buy Order Creator (v2 API) ===\n")
     
     config_filename = "buy_orders.json"
     
@@ -171,6 +189,11 @@ def main():
         print("Error loading configuration. Please check the file format.")
         return
     
+    # Verify the config structure is valid
+    if not isinstance(config, dict):
+        print("Invalid configuration format. Expected a JSON object.")
+        return
+        
     # Get access token
     access_token = config.get("access_token")
     if not access_token or access_token == "YOUR_ACCESS_TOKEN_HERE":
